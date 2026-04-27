@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.python-version
+
+.env
+.env.local
+
+.ruff_cache/
+.pytest_cache/
+
+# Claude Code local settings
+.claude/
+
+.DS_Store
+.idea/
+.vscode/
