@@ -1,0 +1,69 @@
+name: deep-thought
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # MinIO is a platform-level shared resource, not deep-thought's own. It runs
+  # in this compose stack for dev convenience and will move to platform-infra
+  # when extracted. Tactician consumes the same `games` bucket that this
+  # service writes into — bucket layout is a cross-service contract.
+  s3:
+    image: minio/minio:latest
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: changeme123
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  worker:
+    build: .
+    image: deep-thought:latest
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      s3:
+        condition: service_healthy
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      RABBITMQ_REQUEST_QUEUE: deep-thought.analysis.requests
+      RABBITMQ_DLX: deep-thought.dlx
+      RABBITMQ_DLQ: deep-thought.analysis.requests.dlq
+      S3_ENDPOINT_URL: http://s3:9000
+      S3_ACCESS_KEY: admin
+      S3_SECRET_KEY: changeme123
+      S3_BUCKET_ANALYSES: games
+      S3_REGION: us-east-1
+      STOCKFISH_PATH: /usr/local/bin/stockfish
+      STOCKFISH_THREADS: "4"
+      STOCKFISH_HASH_MB: "256"
+      STOCKFISH_DEPTH: "18"
+
+volumes:
+  rabbitmq_data:
+  minio_data:
