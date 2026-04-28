@@ -6,7 +6,7 @@
 FROM debian:bookworm-slim AS sf-builder
 ARG TARGETARCH
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git ca-certificates build-essential \
+        git ca-certificates build-essential wget \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /build
 RUN git clone --depth 1 --branch sf_18 https://github.com/official-stockfish/Stockfish.git
