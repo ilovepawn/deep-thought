@@ -78,7 +78,7 @@ uv run python -m deep_thought.main
 - `dt_stockfish_analyse_seconds` — 포지션당 엔진 평가 시간
 - `dt_s3_operations_seconds{op}` 및 `dt_s3_operations_total{op,result}` — `get` / `put` / `head`
 
-추가로 `prometheus_client` 표준의 `process_*` / `python_*` 시리즈도 함께 제공됩니다.
+추가로 `prometheus_client` 표준의 `python_*` 시리즈, 그리고 Linux에서 실행 시 `process_*` (CPU·RSS·FD) 시리즈가 함께 제공됩니다.
 
 ---
 

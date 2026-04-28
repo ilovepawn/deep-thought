@@ -78,7 +78,7 @@ The worker exposes Prometheus metrics on `:${METRICS_PORT}/metrics` (default `91
 - `dt_stockfish_analyse_seconds` — per-position engine latency
 - `dt_s3_operations_seconds{op}` and `dt_s3_operations_total{op,result}` — `get` / `put` / `head`
 
-Plus the standard `process_*` and `python_*` series from `prometheus_client`.
+Plus the standard `python_*` series from `prometheus_client`, and `process_*` (CPU, RSS, FDs) when running on Linux.
 
 ---
 

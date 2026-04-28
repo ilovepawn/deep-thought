@@ -31,7 +31,7 @@ uv run python -m deep_thought.main
 **Pipeline:** AMQP analysis request → S3 raw PGN download → Stockfish per-move analysis → annotated PGN to S3 → AMQP response
 
 ### Core modules
-- `src/deep_thought/main.py` — entrypoint. Loads config, builds S3 client, starts the consumer.
+- `src/deep_thought/main.py` — entrypoint. Loads config, starts the metrics HTTP server, builds the S3 client, then runs the consumer.
 - `src/deep_thought/consumer.py` — RabbitMQ topology (DLX/DLQ + main queue) and the consume loop. `prefetch=1`, manual ack only after the response is published.
 - `src/deep_thought/analysis.py` — orchestrator. S3 fetch → parse → cache check → Stockfish (or skip on cache hit) → annotate → upload → derive payload.
 - `src/deep_thought/stockfish.py` — UCI engine wrapper. `analyse_position` returns one eval per call from the side-to-move's POV.
@@ -73,7 +73,7 @@ Failed responses keep `requestId` / `gameId` and include `error: {code, message}
 - **One worker = one game = one Stockfish.** Strict serial processing per worker. Stockfish is itself multi-threaded (`STOCKFISH_THREADS`); worker-level concurrency would just thrash CPU. Scale horizontally via more replicas, not by raising `prefetch_count`.
 - **No deep-thought DB.** S3 holds the eval-annotated PGN as the single source of truth. Classifications and summaries are re-derived from `%eval` comments on every request — cheap, ms-scale.
 - **Idempotency by deterministic S3 key.** The cache check is `head_object` on `<bucket>/<YYYY>/<MM>/<DD>/<gameId>.pgn`. Hit → skip Stockfish, re-derive payload from cached PGN. Miss → run Stockfish, upload, derive.
-- **Cross-service S3 contract.** The annotated-PGN bucket (`S3_BUCKET_ANALYSES`, default `games`) and date-partitioned key layout match what tactician's puzzle pipeline reads. Don't change the bucket name or path layout without coordinating with tactician.
+- **Cross-service S3 contract.** The annotated-PGN bucket (`S3_BUCKET_ANALYSES`, required env var — `games` in dev / `ilovepawn-games-analyzed` in prod) and date-partitioned key layout match what tactician's puzzle pipeline reads. Don't change the bucket name or path layout without coordinating with tactician.
 - **S3 bucket ownership and IAM.** Production uses two buckets with write permissions scoped per service:
 
   | Bucket | Writes | Reads |
