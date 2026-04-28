@@ -40,7 +40,6 @@ deep-thought가 쓰는 annotated PGN은 [tactician](https://github.com/ilovepawn
 | 오브젝트 스토리지 | MinIO (S3 호환) / AWS S3 |
 | 스키마 | Pydantic |
 | 패키지 매니저 | uv |
-| 인프라 | Docker Compose |
 
 DB 없음. S3에 저장된 annotated PGN이 단일 소스 오브 트루스이며, 분류와 요약은 매 요청마다 `%eval` 값으로부터 재도출합니다.
 
@@ -48,35 +47,20 @@ DB 없음. S3에 저장된 annotated PGN이 단일 소스 오브 트루스이며
 
 ## 시작하기
 
-### 사전 요구사항
-
-- Docker & Docker Compose
-
-워커 이미지에 Python 3.13, 모든 의존성, Stockfish 18(소스 빌드)이 포함되어 있어 호스트에 별도 설치가 필요 없습니다.
-
-### 실행
+deep-thought는 더 이상 자체 `docker-compose.yml`을 두지 않습니다. RabbitMQ / MinIO / 워커 + 자매 서비스 + 옵저버빌리티 스택은 [`ilovepawn/infra`](https://github.com/ilovepawn/infra) 레포에서 통합 관리됩니다. 이 레포의 형제 폴더로 클론한 뒤 인프라 레포에서 띄우세요:
 
 ```bash
-# 환경 설정 파일 복사 (호스트 모드 실행 때만 필요. compose는 .env 무시)
-cp .env.example .env
-
-# RabbitMQ + MinIO + 워커 시작
-docker compose up -d
-
-# 워커 이미지 빌드 (최초 1회 / Dockerfile·의존성 변경 시)
-docker compose build
-
-# 워커 로그 확인
-docker compose logs -f worker
+# infra 레포에서
+cd compose
+docker compose up -d                                    # 코어 인프라 + 앱
+docker compose --profile observability up -d            # Prometheus + Grafana 추가
 ```
 
-관리 콘솔:
-- RabbitMQ UI: <http://localhost:15672> (`guest` / `guest`)
-- MinIO 콘솔: <http://localhost:9001> (`admin` / `changeme123`)
+인프라 컴포즈가 `../../deep-thought`를 빌드 컨텍스트로 잡고 있어, 이 레포의 변경은 리빌드만 하면 반영됩니다.
 
-#### 호스트 모드 (개발 편의용)
+### 호스트 모드 (개발 편의용)
 
-이미지 리빌드 없이 빠르게 반복하려면 호스트에서 직접 실행할 수도 있습니다. Python 3.13, [uv](https://docs.astral.sh/uv/), Stockfish (`brew install stockfish`)가 필요합니다:
+이미지 리빌드 없이 빠르게 반복하려면 인프라가 띄운 RabbitMQ/MinIO에 호스트에서 직접 붙어 실행할 수 있습니다. Python 3.13, [uv](https://docs.astral.sh/uv/), Stockfish (`brew install stockfish`) 필요. 인프라 컴포즈와 같은 환경변수를 (또는 자체 `.env`로) 주입해 주세요:
 
 ```bash
 uv sync
@@ -166,9 +150,7 @@ deep-thought/
 │   ├── s3.py            # boto3 클라이언트 + S3Uri 파서 + 결정적 키 빌더
 │   ├── messages.py      # Pydantic 스키마 (camelCase JSON)
 │   └── config.py        # 환경 설정
-├── tests/               # 스모크 / E2E 테스트 스크립트
 ├── Dockerfile           # 멀티스테이지: Stockfish 18 빌더 + Python 런타임
-├── docker-compose.yml   # RabbitMQ + MinIO + 워커
 └── pyproject.toml
 ```
 

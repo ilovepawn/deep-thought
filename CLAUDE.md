@@ -12,23 +12,16 @@ The annotated PGNs deep-thought writes are the same artifacts that **tactician**
 
 ## Commands
 
+The local dev stack (RabbitMQ, MinIO, this worker, sibling services, Prometheus/Grafana) is managed by the sibling [`infra` repo](../infra). All `docker compose` commands run from there, not from this repo.
+
 ```bash
-# Start RabbitMQ + MinIO + worker
-docker compose up -d
+# In ../infra/compose:
+docker compose up -d                                    # core infra + apps
+docker compose --profile observability up -d            # add Prometheus + Grafana
+docker compose logs -f deep-thought                     # tail this worker
 
-# Build the worker image (Python 3.13 + Stockfish 18 bundled)
-docker compose build
-
-# Tail worker logs
-docker compose logs -f worker
-
-# RabbitMQ management UI
-open http://localhost:15672  # guest / guest
-
-# MinIO console
-open http://localhost:9001  # admin / changeme123
-
-# Host-mode worker (developer convenience — needs uv + host Stockfish)
+# Host-mode worker (developer convenience — needs uv + host Stockfish,
+# and infra compose running so RabbitMQ/MinIO are reachable)
 uv sync
 uv run python -m deep_thought.main
 ```

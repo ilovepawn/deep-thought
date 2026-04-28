@@ -40,7 +40,6 @@ The annotated PGNs deep-thought writes are the same artifacts [tactician](https:
 | Object Storage | MinIO (S3-compatible) / AWS S3 |
 | Schema | Pydantic |
 | Package Manager | uv |
-| Infrastructure | Docker Compose |
 
 No database. The annotated PGN in S3 is the single source of truth; classifications and summaries are re-derived from `%eval` values on every request.
 
@@ -48,35 +47,20 @@ No database. The annotated PGN in S3 is the single source of truth; classificati
 
 ## Getting Started
 
-### Prerequisites
-
-- Docker & Docker Compose
-
-The worker image bundles Python 3.13, all dependencies, and Stockfish 18 (compiled from source for reproducibility), so no host-side Python or Stockfish install is required.
-
-### Run
+deep-thought no longer ships a local `docker-compose.yml`. The full dev stack (RabbitMQ, MinIO, the worker, plus sibling services and observability) lives in the [`ilovepawn/infra`](https://github.com/ilovepawn/infra) repo. Clone it as a sibling of this repo and bring up the stack from there:
 
 ```bash
-# Copy environment config (only needed for host-mode runs; compose ignores .env)
-cp .env.example .env
-
-# Start RabbitMQ + MinIO + worker
-docker compose up -d
-
-# Build the worker image (one-time / when Dockerfile or deps change)
-docker compose build
-
-# Tail worker logs
-docker compose logs -f worker
+# In the infra repo
+cd compose
+docker compose up -d                                    # core infra + apps
+docker compose --profile observability up -d            # add Prometheus + Grafana
 ```
 
-Management consoles:
-- RabbitMQ UI: <http://localhost:15672> (`guest` / `guest`)
-- MinIO console: <http://localhost:9001> (`admin` / `changeme123`)
+The infra repo's compose builds this service from `../../deep-thought`, so changes here are picked up by a rebuild.
 
-#### Host-mode (developer convenience)
+### Host-mode (developer convenience)
 
-If you'd rather iterate without rebuilding the image, run the worker on the host. You'll need Python 3.13, [uv](https://docs.astral.sh/uv/), and Stockfish (`brew install stockfish`):
+To iterate without rebuilding the image, run the worker on the host against infra-provided RabbitMQ/MinIO. You'll need Python 3.13, [uv](https://docs.astral.sh/uv/), and Stockfish (`brew install stockfish`). Set the env vars from the infra compose (or your own `.env`) before running:
 
 ```bash
 uv sync
@@ -166,9 +150,7 @@ deep-thought/
 │   ├── s3.py            # boto3 client + S3Uri parser + deterministic key builder
 │   ├── messages.py      # Pydantic schemas (camelCase JSON)
 │   └── config.py        # Environment configuration
-├── tests/               # Smoke and E2E test scripts
 ├── Dockerfile           # Multi-stage: Stockfish 18 builder + Python runtime
-├── docker-compose.yml   # RabbitMQ + MinIO + worker
 └── pyproject.toml
 ```
 
