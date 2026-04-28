@@ -40,6 +40,7 @@ deep-thought가 쓰는 annotated PGN은 [tactician](https://github.com/ilovepawn
 | 오브젝트 스토리지 | MinIO (S3 호환) / AWS S3 |
 | 스키마 | Pydantic |
 | 패키지 매니저 | uv |
+| 옵저버빌리티 | prometheus_client (`:9100/metrics`) |
 
 DB 없음. S3에 저장된 annotated PGN이 단일 소스 오브 트루스이며, 분류와 요약은 매 요청마다 `%eval` 값으로부터 재도출합니다.
 
@@ -66,6 +67,18 @@ docker compose --profile observability up -d            # Prometheus + Grafana �
 uv sync
 uv run python -m deep_thought.main
 ```
+
+### 메트릭
+
+워커는 `:${METRICS_PORT}/metrics` (기본 `9100`)에 Prometheus 메트릭을 노출합니다. 인프라 컴포즈로 띄우면 같은 도커 네트워크의 Prometheus가 자동 스크레이프합니다. 노출 시리즈:
+
+- `dt_messages_consumed_total{status}` — `success` / `failure` / `decode_error`
+- `dt_message_processing_seconds` — 메시지 처리 종단 히스토그램
+- `dt_analysis_cache_total{result}` — `hit` / `miss`
+- `dt_stockfish_analyse_seconds` — 포지션당 엔진 평가 시간
+- `dt_s3_operations_seconds{op}` 및 `dt_s3_operations_total{op,result}` — `get` / `put` / `head`
+
+추가로 `prometheus_client` 표준의 `process_*` / `python_*` 시리즈도 함께 제공됩니다.
 
 ---
 
@@ -149,6 +162,7 @@ deep-thought/
 │   ├── summary.py       # Lichess 스타일 정확도 + 진영별 ACPL
 │   ├── s3.py            # boto3 클라이언트 + S3Uri 파서 + 결정적 키 빌더
 │   ├── messages.py      # Pydantic 스키마 (camelCase JSON)
+│   ├── metrics.py       # Prometheus 카운터/히스토그램 + HTTP 서버
 │   └── config.py        # 환경 설정
 ├── Dockerfile           # 멀티스테이지: Stockfish 18 빌더 + Python 런타임
 └── pyproject.toml

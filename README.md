@@ -40,6 +40,7 @@ The annotated PGNs deep-thought writes are the same artifacts [tactician](https:
 | Object Storage | MinIO (S3-compatible) / AWS S3 |
 | Schema | Pydantic |
 | Package Manager | uv |
+| Observability | prometheus_client (metrics on `:9100/metrics`) |
 
 No database. The annotated PGN in S3 is the single source of truth; classifications and summaries are re-derived from `%eval` values on every request.
 
@@ -66,6 +67,18 @@ To iterate without rebuilding the image, run the worker on the host against infr
 uv sync
 uv run python -m deep_thought.main
 ```
+
+### Metrics
+
+The worker exposes Prometheus metrics on `:${METRICS_PORT}/metrics` (default `9100`). When run via the infra compose, Prometheus scrapes this endpoint over the docker network. Exposed series:
+
+- `dt_messages_consumed_total{status}` — `success` / `failure` / `decode_error`
+- `dt_message_processing_seconds` — end-to-end histogram per message
+- `dt_analysis_cache_total{result}` — `hit` / `miss`
+- `dt_stockfish_analyse_seconds` — per-position engine latency
+- `dt_s3_operations_seconds{op}` and `dt_s3_operations_total{op,result}` — `get` / `put` / `head`
+
+Plus the standard `process_*` and `python_*` series from `prometheus_client`.
 
 ---
 
@@ -149,6 +162,7 @@ deep-thought/
 │   ├── summary.py       # Lichess-style accuracy + ACPL per side
 │   ├── s3.py            # boto3 client + S3Uri parser + deterministic key builder
 │   ├── messages.py      # Pydantic schemas (camelCase JSON)
+│   ├── metrics.py       # Prometheus counters / histograms + HTTP server
 │   └── config.py        # Environment configuration
 ├── Dockerfile           # Multi-stage: Stockfish 18 builder + Python runtime
 └── pyproject.toml

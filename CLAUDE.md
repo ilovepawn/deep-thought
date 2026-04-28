@@ -40,6 +40,7 @@ uv run python -m deep_thought.main
 - `src/deep_thought/summary.py` — Lichess-style accuracy approximation + ACPL per side.
 - `src/deep_thought/s3.py` — boto3 client + `S3Uri.parse` for `s3://bucket/key` URIs + deterministic analysis key builder.
 - `src/deep_thought/messages.py` — Pydantic schemas for inbound `AnalysisRequest` and outbound `AnalysisResponse`. camelCase JSON via `to_camel` alias generator.
+- `src/deep_thought/metrics.py` — Prometheus metric definitions (counters/histograms) and `start_metrics_server`. Instrumentation lives in the modules whose hot paths it measures (consumer, analysis, stockfish, s3).
 - `src/deep_thought/config.py` — env loader returning a frozen `Config` dataclass.
 
 ### Message contract
@@ -88,6 +89,7 @@ Failed responses keep `requestId` / `gameId` and include `error: {code, message}
 - **AMQP RPC pattern.** Responses go to `properties.reply_to` with the original `correlation_id`. Main platform owns the reply queue lifecycle; deep-thought is stateless about routing.
 - **DLX/DLQ.** Decode failures are nacked with `requeue=False` → routed to DLQ via `x-dead-letter-exchange`. Handler exceptions ack the message (response body carries the failure) — re-running won't fix it.
 - **Prefetch=1.** Critical. Combined with manual ack, this gives at-least-once delivery with backpressure tied to actual analysis throughput.
+- **Metrics endpoint.** The worker starts a `prometheus_client` HTTP server on `METRICS_PORT` (default `9100`) at startup. Series are namespaced `dt_*`. The infra repo's Prometheus scrapes this over the docker network — when adding new metrics here, also update the infra repo's `monitoring/prometheus/prometheus.yml` and Grafana dashboards.
 - **GPL-3.0-or-later.** Forced by python-chess.
 - **Branch workflow.** Work on `dev`, merge to `main` only at deployment.
 - **Commit messages.** Single-line conventional commits (`feat:`, `fix:`, `chore:`, `refactor:`, `docs:`). English.

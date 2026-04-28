@@ -30,10 +30,16 @@ class StockfishConfig:
 
 
 @dataclass(frozen=True)
+class MetricsConfig:
+    port: int
+
+
+@dataclass(frozen=True)
 class Config:
     rabbit: RabbitConfig
     s3: S3Config
     stockfish: StockfishConfig
+    metrics: MetricsConfig
 
 
 def _require(key: str) -> str:
@@ -64,5 +70,8 @@ def load_config() -> Config:
             threads=int(os.environ.get("STOCKFISH_THREADS", "4")),
             hash_mb=int(os.environ.get("STOCKFISH_HASH_MB", "256")),
             depth=int(os.environ.get("STOCKFISH_DEPTH", "18")),
+        ),
+        metrics=MetricsConfig(
+            port=int(os.environ.get("METRICS_PORT", "9100")),
         ),
     )

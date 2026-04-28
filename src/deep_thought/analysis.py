@@ -4,6 +4,7 @@ import chess
 import chess.engine
 import chess.pgn
 
+from deep_thought import metrics
 from deep_thought.classifier import classify
 from deep_thought.config import Config
 from deep_thought.messages import (
@@ -49,12 +50,14 @@ def run_analysis(req: AnalysisRequest, cfg: Config, s3: S3Client) -> AnalysisRes
     out_uri = s3.analysis_uri(req.game_id, date.yyyy, date.mm, date.dd)
 
     if s3.object_exists(out_uri):
+        metrics.analysis_cache_total.labels(result="hit").inc()
         log.info("cache hit for game_id=%s; reusing %s", req.game_id, out_uri.to_str())
         cached_pgn = s3.get_object_text(out_uri)
         cached_game = parse_game(cached_pgn)
         evals_white_pov = read_evals_from_pgn(cached_game)
         return _build_response(req, cached_game, evals_white_pov, out_uri)
 
+    metrics.analysis_cache_total.labels(result="miss").inc()
     log.info("cache miss for game_id=%s; running stockfish", req.game_id)
     try:
         with open_engine(cfg.stockfish) as engine:

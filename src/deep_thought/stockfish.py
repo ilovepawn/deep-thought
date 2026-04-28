@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import chess
 import chess.engine
 
+from deep_thought import metrics
 from deep_thought.config import StockfishConfig
 
 
@@ -44,7 +45,8 @@ def analyse_position(
     depth: int,
 ) -> tuple[Eval, chess.Move | None]:
     """Return (eval-from-side-to-move, engine's best move) for the current position."""
-    info = engine.analyse(board, chess.engine.Limit(depth=depth))
+    with metrics.stockfish_analyse_seconds.time():
+        info = engine.analyse(board, chess.engine.Limit(depth=depth))
     score = info["score"]
     eval_ = Eval.from_pov_score(score, board.turn)
     pv = info.get("pv") or []

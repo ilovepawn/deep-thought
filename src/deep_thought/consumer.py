@@ -1,11 +1,13 @@
 import json
 import logging
+import time
 from collections.abc import Callable
 
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.spec import Basic, BasicProperties
 
+from deep_thought import metrics
 from deep_thought.config import Config
 from deep_thought.messages import AnalysisError, AnalysisRequest, AnalysisResponse
 
@@ -60,11 +62,13 @@ def _process_one(
     handler: Handler,
 ) -> None:
     """Decode → handle → publish reply → ack. On unexpected failures, nack to DLQ."""
+    started = time.perf_counter()
     try:
         payload = json.loads(body)
         req = AnalysisRequest.model_validate(payload)
-    except Exception as exc:
+    except Exception:
         log.exception("failed to decode message; dead-lettering")
+        metrics.messages_consumed_total.labels(status="decode_error").inc()
         channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         return
 
@@ -83,6 +87,11 @@ def _process_one(
 
     _publish_reply(channel, properties, response)
     channel.basic_ack(delivery_tag=method.delivery_tag)
+
+    metrics.message_processing_seconds.observe(time.perf_counter() - started)
+    metrics.messages_consumed_total.labels(
+        status="success" if response.status == "success" else "failure"
+    ).inc()
 
 
 def _publish_reply(

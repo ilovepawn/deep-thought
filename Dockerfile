@@ -36,4 +36,6 @@ RUN uv sync --no-dev
 RUN useradd --create-home --shell /bin/bash app
 USER app
 
+EXPOSE 9100
+
 ENTRYPOINT ["uv", "run", "--no-sync", "python", "-m", "deep_thought.main"]
