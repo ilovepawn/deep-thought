@@ -153,7 +153,7 @@ AMQP 속성:
 ```
 deep-thought/
 ├── src/deep_thought/
-│   ├── main.py          # 진입점: config 로드, 컨슈머 시작
+│   ├── main.py          # 진입점: config 로드, 메트릭 서버 기동, 컨슈머 실행
 │   ├── consumer.py      # RabbitMQ 토폴로지 + 소비 루프 (prefetch=1, manual ack, DLQ)
 │   ├── analysis.py      # 파이프라인 오케스트레이터 (S3 → 캐시 체크 → Stockfish → 업로드)
 │   ├── stockfish.py     # UCI 엔진 래퍼

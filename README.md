@@ -153,7 +153,7 @@ Read access is platform-wide so any service can pull either kind of PGN; write a
 ```
 deep-thought/
 ├── src/deep_thought/
-│   ├── main.py          # Entry point: load config, start consumer
+│   ├── main.py          # Entry point: load config, start metrics server, run consumer
 │   ├── consumer.py      # RabbitMQ topology + consume loop (prefetch=1, manual ack, DLQ)
 │   ├── analysis.py      # Pipeline orchestrator (S3 → cache check → Stockfish → upload)
 │   ├── stockfish.py     # UCI engine wrapper
